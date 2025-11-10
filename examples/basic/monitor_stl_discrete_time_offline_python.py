@@ -14,7 +14,7 @@ def monitor():
     spec.name = 'STL discrete-time online Python monitor'
     spec.declare_var('a', 'float')
     spec.declare_var('b', 'float')
-    spec.spec = 'a + b >= - 2;'
+    spec.spec = 'a + b >= 2;'
 
     try:
         spec.parse()
@@ -23,6 +23,9 @@ def monitor():
         sys.exit()
 
     rob = spec.evaluate(dataSet)
+    print("dataset")
+    print(dataSet)
+    print(spec.spec)
     print('Robustness: ' + str(rob))
 
 if __name__ == '__main__':

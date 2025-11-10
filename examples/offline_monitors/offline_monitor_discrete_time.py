@@ -13,6 +13,7 @@ def monitor():
     data2 = read_csv('example2.csv')
     data3 = read_csv('example3.csv')
     data4 = read_csv('example4.csv')
+    print(data1)
 
     # # #
     #

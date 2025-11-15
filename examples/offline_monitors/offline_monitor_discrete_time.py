@@ -62,6 +62,7 @@ def monitor():
 
     for i in range(len(data1[' gnt'])):
         rob = spec.update(i, [('req', data1[' req'][i][1]), ('gnt', data1[' gnt'][i][1])])
+        print(rob)
 
     print('Example (a) - output robustness: {}'.format(rob))
 

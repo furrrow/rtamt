@@ -6,6 +6,7 @@ import csv
 import os
 import re
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 surface_dict = {
     "dry_sand"      : 74,
@@ -64,7 +65,7 @@ def speed_limit_rule(data, speed_limit=900):
     robustness_list = spec.evaluate(data)
     return robustness_list
 
-def water_exposure_rule(data):
+def water_exposure_rule(data, slow_speed=50):
     """
     inf robustness means it pass by not being triggered
     neg robustness -> bad.
@@ -76,11 +77,17 @@ def water_exposure_rule(data):
     """
     spec = rtamt.StlDiscreteTimeSpecification(semantics=rtamt.Semantics.OUTPUT_ROBUSTNESS)
     spec.name = 'water_exposure'
-
-    spec.declare_var('surface', 'int')
-    # '((surface==8) implies (eventually[0:3](always[0:2](surface==74))));'
-    spec.spec = '((surface==8)implies(eventually[0:3](always[0:1](surface==74))));'
-
+    spec.declare_const('surface_threshold', 'float', '92')
+    spec.declare_const('speed_threshold', 'float', '50')
+    spec.declare_const('T', 'float', '3')
+    spec.declare_var('surface', 'float')
+    spec.declare_var('kart1_speed', 'float')
+    spec.declare_var('response', 'float')
+    spec.declare_var('out', 'float')
+    # spec.set_var_io_type('surface', 'input')
+    # spec.set_var_io_type('kart1_speed', 'output')
+    spec.add_sub_spec('response = eventually[0:T](kart1_speed <= speed_threshold);')
+    spec.spec = 'out = ((surface == 92) implies response);'
     try:
         spec.parse()
         spec.pastify()
@@ -90,13 +97,22 @@ def water_exposure_rule(data):
     # if "time" not in list(data.keys()):
     #     data['time'] = data['step']
     robustness_list = []
-    for i in range(len(data['surface'])):
-        rob = spec.update(i, [
+    # cart_x = np.array(data['kart1_X'])
+    # cart_y = np.array(data['kart1_Y'])
+    # plt.plot(cart_x, cart_y)
+    # plt.show()
+
+    for i in range(len(data['kart1_X'])):
+        out_rob = spec.update(i, [
             ('surface', data['surface'][i]),
+            ('kart1_speed', data['kart1_speed'][i]),
         ])
-        robustness_list.append([i, rob])
+        robustness_list.append([i, out_rob])
+        response_rob = spec.get_value('response')
         # robustness_list.append([i, rob==0])
-        # print(f"time {i} robustness {rob:.3f}")
+        print(f"time {i} resp_rob {response_rob:.3f} out_rob {out_rob:.3f} ")
+        # if i > 10:
+        #     break
     return robustness_list
 
 def collision_rule(data):
@@ -131,7 +147,7 @@ if __name__ == '__main__':
     csv_folder_path = "/home/jim/Projects/rtamt/mariokart_traces/2025-11-03_22-25-04"
     files = glob.glob(csv_folder_path + "/*.csv")
     files.sort()
-    verbose = False
+    verbose = True
     speed_limit = 850
 
     speed_limit_matrix = []
@@ -159,9 +175,9 @@ if __name__ == '__main__':
 
         if verbose:
             print(f"file {filename}")
-            print("speed limit rule:", speed_result[0:10, 1])
+            # print("speed limit rule:", speed_result[0:10, 1])
             print("water exposure rule:", water_result[0:10, 1])
-            print("collision rule:", collision_result[0:10, 1])
+            # print("collision rule:", collision_result[0:10, 1])
             print()
         speed_limit_matrix.append(speed_result[:, 1])
         non_neg_val = (speed_result[:, 1][speed_result[:, 1] < 0])
@@ -184,8 +200,8 @@ if __name__ == '__main__':
         collision_rule_dict['min_neg_robustness'].append(
             np.min(non_neg_val) if len(non_neg_val) > 0 else 0)
         # for debug purposes
-        # if len(speed_limit_dict['avg_neg_robustness']) > 10:
-        #     break
+        if len(speed_limit_dict['avg_neg_robustness']) > 0:
+            break
 
     print("speed_limit_rule:")
     print(f"average negative robustness {np.average(speed_limit_dict['avg_neg_robustness']):.1f}, "

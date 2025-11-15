@@ -76,18 +76,19 @@ def water_exposure_rule(data, slow_speed=50):
     - the value is the difference between Gnt and the defined Gnt Threshold
     """
     spec = rtamt.StlDiscreteTimeSpecification(semantics=rtamt.Semantics.OUTPUT_ROBUSTNESS)
-    spec.name = 'water_exposure'
-    spec.declare_const('surface_threshold', 'float', '92')
-    spec.declare_const('speed_threshold', 'float', '50')
-    spec.declare_const('T', 'float', '3')
+    spec.name = 'water_exposure_rule'
+    spec.declare_const('threshold', 'float', '92')
+    spec.declare_const('speed_threshold', 'float', '700')
+    spec.declare_const('T', 'float', '50')
     spec.declare_var('surface', 'float')
     spec.declare_var('kart1_speed', 'float')
     spec.declare_var('response', 'float')
     spec.declare_var('out', 'float')
-    # spec.set_var_io_type('surface', 'input')
-    # spec.set_var_io_type('kart1_speed', 'output')
+    spec.set_var_io_type('surface', 'input')
+    spec.set_var_io_type('kart1_speed', 'output')
     spec.add_sub_spec('response = eventually[0:T](kart1_speed <= speed_threshold);')
-    spec.spec = 'out = ((surface == 92) implies response);'
+    spec.spec = 'out = ((surface == threshold) implies response);'
+
     try:
         spec.parse()
         spec.pastify()
@@ -110,7 +111,7 @@ def water_exposure_rule(data, slow_speed=50):
         robustness_list.append([i, out_rob])
         response_rob = spec.get_value('response')
         # robustness_list.append([i, rob==0])
-        print(f"time {i} resp_rob {response_rob:.3f} out_rob {out_rob:.3f} ")
+        # print(f"time {i} resp_rob {response_rob:.3f} out_rob {out_rob:.3f} ")
         # if i > 10:
         #     break
     return robustness_list
@@ -147,8 +148,8 @@ if __name__ == '__main__':
     csv_folder_path = "/home/jim/Projects/rtamt/mariokart_traces/2025-11-03_22-25-04"
     files = glob.glob(csv_folder_path + "/*.csv")
     files.sort()
-    verbose = True
-    speed_limit = 850
+    verbose = False
+    speed_limit = 700
 
     speed_limit_matrix = []
     water_rule_matrix = []
@@ -175,40 +176,40 @@ if __name__ == '__main__':
 
         if verbose:
             print(f"file {filename}")
-            # print("speed limit rule:", speed_result[0:10, 1])
+            print("speed limit rule:", speed_result[0:10, 1])
             print("water exposure rule:", water_result[0:10, 1])
-            # print("collision rule:", collision_result[0:10, 1])
+            print("collision rule:", collision_result[0:10, 1])
             print()
         speed_limit_matrix.append(speed_result[:, 1])
         non_neg_val = (speed_result[:, 1][speed_result[:, 1] < 0])
         speed_limit_dict['avg_neg_robustness'].append(
-            np.average(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.average(non_neg_val) if len(non_neg_val) > 0 else np.nan)
         speed_limit_dict['min_neg_robustness'].append(
-            np.min(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.min(non_neg_val) if len(non_neg_val) > 0 else np.nan)
 
         water_rule_matrix.append(water_result[:, 1])
         non_neg_val = (water_result[:, 1][water_result[:, 1] < 0])
         water_rule_dict['avg_neg_robustness'].append(
-            np.average(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.average(non_neg_val) if len(non_neg_val) > 0 else np.nan)
         water_rule_dict['min_neg_robustness'].append(
-            np.min(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.min(non_neg_val) if len(non_neg_val) > 0 else np.nan)
 
         collision_rule_matrix.append(collision_result[:, 1])
         non_neg_val = (collision_result[:, 1][collision_result[:, 1] < 0])
         collision_rule_dict['avg_neg_robustness'].append(
-            np.average(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.average(non_neg_val) if len(non_neg_val) > 0 else np.nan)
         collision_rule_dict['min_neg_robustness'].append(
-            np.min(non_neg_val) if len(non_neg_val) > 0 else 0)
+            np.min(non_neg_val) if len(non_neg_val) > 0 else np.nan)
         # for debug purposes
-        if len(speed_limit_dict['avg_neg_robustness']) > 0:
-            break
+        # if len(speed_limit_dict['avg_neg_robustness']) > 0:
+        #     break
 
     print("speed_limit_rule:")
-    print(f"average negative robustness {np.average(speed_limit_dict['avg_neg_robustness']):.1f}, "
-          f"minimal negative robustness {np.min(speed_limit_dict['min_neg_robustness']):.1f}")
+    print(f"average negative robustness {np.nanmean(speed_limit_dict['avg_neg_robustness']):.1f}, "
+          f"minimal negative robustness {np.nanmin(speed_limit_dict['min_neg_robustness']):.1f}")
     print("water_rule:")
-    print(f"average negative robustness {np.average(water_rule_dict['avg_neg_robustness']):.1f}, "
-          f"minimal negative robustness {np.min(water_rule_dict['min_neg_robustness']):.1f}")
+    print(f"average negative robustness {np.nanmean(water_rule_dict['avg_neg_robustness']):.1f}, "
+          f"minimal negative robustness {np.nanmin(water_rule_dict['min_neg_robustness']):.1f}")
     print("collision_rule:")
-    print(f"average negative robustness {np.average(collision_rule_dict['avg_neg_robustness']):.1f}, "
-          f"minimal negative robustness {np.min(collision_rule_dict['min_neg_robustness']):.1f}")
+    print(f"average negative robustness {np.nanmean(collision_rule_dict['avg_neg_robustness']):.1f}, "
+          f"minimal negative robustness {np.nanmin(collision_rule_dict['min_neg_robustness']):.1f}")
